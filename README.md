@@ -6,7 +6,7 @@
 
 ## Local Development
 
-**Prerequisites:** Node.js 18.18+
+**Prerequisites:** Node.js 20+
 
 1. Install dependencies:
    `npm install`
