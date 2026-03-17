@@ -51,6 +51,13 @@ const indexPath = path.join(distPath, 'index.html');
 if (fs.existsSync(indexPath)) {
   app.use(express.static(distPath));
   app.get('*', (_req, res) => res.sendFile(indexPath));
+} else {
+  app.get('/', (_req, res) => {
+    res
+      .status(200)
+      .type('text/plain')
+      .send('UI dev server is on http://localhost:3000. Build the app to serve it from this port.');
+  });
 }
 
 const port = Number(process.env.PORT) || 3001;
