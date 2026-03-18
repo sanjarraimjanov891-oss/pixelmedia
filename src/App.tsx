@@ -48,7 +48,7 @@ interface Order {
   status: string;
   type: string;
   operator: string;
-  deletedAt?: number;
+  deletedAt?: number | null;
 }
 
 interface SchoolOrder {
@@ -60,7 +60,7 @@ interface SchoolOrder {
   monitorPhone: string;
   date: string;
   status: string;
-  deletedAt?: number;
+  deletedAt?: number | null;
 }
 
 const modules = [
@@ -70,17 +70,6 @@ const modules = [
   { id: 'reports', icon: BarChart3, label: 'Отчёт', subLabel: 'Студиялык аналитика' },
   { id: 'calendar', icon: CalendarIcon, label: 'Календарь', subLabel: 'Бронь графиги' },
   { id: 'design', icon: Palette, label: 'Дизайн', subLabel: 'Графикалык иштер' },
-];
-
-const activeOrders = [
-  { id: 1, title: 'Азамат & Айпери', date: '12-март, 2026', status: 'Монтаж', type: 'Премиум', operator: 'Санжар' },
-  { id: 2, title: 'Нурбек & Мээрим', date: '14-март, 2026', status: 'Тартуу', type: 'Стандарт', operator: 'Нурболот' },
-  { id: 3, title: 'Бакыт & Гүлнур', date: '16-март, 2026', status: 'Күтүүдө', type: 'VIP', operator: 'Санжар' },
-];
-
-const readyOrders = [
-  { id: 4, title: 'Эрмек & Каныкей', date: '10-март, 2026', status: 'Даяр', type: 'Премиум', operator: 'Нурболот' },
-  { id: 5, title: 'Улан & Назгүл', date: '08-март, 2026', status: 'Даяр', type: 'Стандарт', operator: 'Санжар' },
 ];
 
 const AIChatModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
@@ -652,7 +641,7 @@ const SchoolListPage = ({ onNavigate, schoolOrders, onDeleteOrder }: { onNavigat
   </motion.div>
 );
 
-const AddSchoolOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Page) => void, onAddOrder: (order: Omit<SchoolOrder, 'id'>) => void, key?: string }) => {
+const AddSchoolOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Page) => void, onAddOrder: (order: Omit<SchoolOrder, 'id'>) => Promise<void>, key?: string }) => {
   const [formData, setFormData] = useState({
     schoolName: '',
     className: '',
@@ -662,13 +651,17 @@ const AddSchoolOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Pag
     date: new Date().toISOString().split('T')[0],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddOrder({
-      ...formData,
-      status: 'Күтүүдө'
-    });
-    onNavigate('school_list');
+    try {
+      await onAddOrder({
+        ...formData,
+        status: 'Күтүүдө'
+      });
+      onNavigate('school_list');
+    } catch (error) {
+      console.error('Failed to save school order:', error);
+    }
   };
 
   return (
@@ -886,7 +879,11 @@ const TrashPage = ({
   );
 };
 
-const WeddingPage = ({ onNavigate }: { onNavigate: (page: Page) => void, key?: string }) => (
+const WeddingPage = ({ onNavigate, orders }: { onNavigate: (page: Page) => void, orders: Order[], key?: string }) => {
+  const readyOrders = orders.filter((order) => order.status === 'Даяр');
+  const activeOrders = orders.filter((order) => order.status !== 'Даяр');
+
+  return (
   <motion.div 
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
@@ -961,7 +958,7 @@ const WeddingPage = ({ onNavigate }: { onNavigate: (page: Page) => void, key?: s
                   )}
                 </div>
                 <div>
-                  <h4 className="font-bold text-white">{order.title}</h4>
+                  <h4 className="font-bold text-white">{order.customerName}</h4>
                   <p className="text-xs text-slate-400 font-medium">{order.date} • {order.type}</p>
                 </div>
               </div>
@@ -1011,7 +1008,7 @@ const WeddingPage = ({ onNavigate }: { onNavigate: (page: Page) => void, key?: s
                   )}
                 </div>
                 <div>
-                  <h4 className="font-bold text-white">{order.title}</h4>
+                  <h4 className="font-bold text-white">{order.customerName}</h4>
                   <p className="text-xs text-slate-400 font-medium">{order.date} • {order.type}</p>
                 </div>
               </div>
@@ -1027,13 +1024,11 @@ const WeddingPage = ({ onNavigate }: { onNavigate: (page: Page) => void, key?: s
       </section>
     </div>
   </motion.div>
-);
+  );
+};
 
 const ProjectDetailsPage = ({ onNavigate }: { onNavigate: (page: Page) => void, key?: string }) => {
-  const [notes, setNotes] = useState([
-    { id: 1, text: 'Баландын үйүнө баруу убактысы:', time: '09:00' },
-    { id: 2, text: 'Ресторанга баруу убактысы:', time: '18:00' },
-  ]);
+  const [notes, setNotes] = useState<{ id: number; text: string; time: string }[]>([]);
 
   const addNote = () => {
     const newNote = {
@@ -1176,7 +1171,7 @@ const ProjectDetailsPage = ({ onNavigate }: { onNavigate: (page: Page) => void, 
   );
 };
 
-const AddOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Page) => void, onAddOrder: (order: Omit<Order, 'id'>) => void, key?: string }) => {
+const AddOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Page) => void, onAddOrder: (order: Omit<Order, 'id'>) => Promise<void>, key?: string }) => {
   const [formData, setFormData] = useState({
     customerName: '',
     date: '',
@@ -1186,14 +1181,18 @@ const AddOrderPage = ({ onNavigate, onAddOrder }: { onNavigate: (page: Page) => 
     operator: 'Санжар',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddOrder({
-      ...formData,
-      status: 'Күтүүдө',
-      type: 'Стандарт'
-    });
-    onNavigate('orders_list');
+    try {
+      await onAddOrder({
+        ...formData,
+        status: 'Күтүүдө',
+        type: 'Стандарт'
+      });
+      onNavigate('orders_list');
+    } catch (error) {
+      console.error('Failed to save order:', error);
+    }
   };
 
   return (
@@ -1422,41 +1421,156 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [schoolOrders, setSchoolOrders] = useState<SchoolOrder[]>([]);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     (window as any).openAIChat = () => setIsAIChatOpen(true);
+    const loadData = async () => {
+      try {
+        setLoadError('');
+        const [ordersResponse, schoolOrdersResponse] = await Promise.all([
+          fetch('/api/orders'),
+          fetch('/api/school-orders'),
+        ]);
+
+        if (!ordersResponse.ok || !schoolOrdersResponse.ok) {
+          throw new Error('Failed to load data');
+        }
+
+        const [ordersData, schoolOrdersData] = await Promise.all([
+          ordersResponse.json(),
+          schoolOrdersResponse.json(),
+        ]);
+
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        setSchoolOrders(Array.isArray(schoolOrdersData) ? schoolOrdersData : []);
+      } catch (error) {
+        console.error('Data load error:', error);
+        setLoadError('Маалыматтарды жүктөөдө ката кетти. Серверди текшериңиз.');
+      }
+    };
+
+    loadData();
   }, []);
 
-  const handleAddOrder = (newOrder: Omit<Order, 'id'>) => {
-    const orderWithId = {
-      ...newOrder,
-      id: Date.now(),
-    };
-    setOrders(prev => [orderWithId, ...prev]);
+  const handleAddOrder = async (newOrder: Omit<Order, 'id'>) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const createdOrder = await response.json();
+      setLoadError('');
+      setOrders(prev => [createdOrder, ...prev]);
+    } catch (error) {
+      console.error('Create order error:', error);
+      setLoadError('Заказ сакталбай калды. Кайра аракет кылыңыз.');
+      throw error;
+    }
   };
 
-  const handleAddSchoolOrder = (newOrder: Omit<SchoolOrder, 'id'>) => {
-    const orderWithId = {
-      ...newOrder,
-      id: Date.now(),
-    };
-    setSchoolOrders(prev => [orderWithId, ...prev]);
+  const handleAddSchoolOrder = async (newOrder: Omit<SchoolOrder, 'id'>) => {
+    try {
+      const response = await fetch('/api/school-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create school order');
+      }
+
+      const createdOrder = await response.json();
+      setLoadError('');
+      setSchoolOrders(prev => [createdOrder, ...prev]);
+    } catch (error) {
+      console.error('Create school order error:', error);
+      setLoadError('Мектеп заказы сакталбай калды. Кайра аракет кылыңыз.');
+      throw error;
+    }
   };
 
-  const handleDeleteOrder = (id: number) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, deletedAt: Date.now() } : o));
+  const handleDeleteOrder = async (id: number) => {
+    try {
+      const response = await fetch(`/api/orders/${id}/delete`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete order');
+      }
+
+      const updatedOrder = await response.json();
+      setLoadError('');
+      setOrders(prev => prev.map(o => o.id === id ? updatedOrder : o));
+    } catch (error) {
+      console.error('Delete order error:', error);
+      setLoadError('Заказды өчүрүү мүмкүн болгон жок.');
+    }
   };
 
-  const handleDeleteSchoolOrder = (id: number) => {
-    setSchoolOrders(prev => prev.map(o => o.id === id ? { ...o, deletedAt: Date.now() } : o));
+  const handleDeleteSchoolOrder = async (id: number) => {
+    try {
+      const response = await fetch(`/api/school-orders/${id}/delete`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete school order');
+      }
+
+      const updatedOrder = await response.json();
+      setLoadError('');
+      setSchoolOrders(prev => prev.map(o => o.id === id ? updatedOrder : o));
+    } catch (error) {
+      console.error('Delete school order error:', error);
+      setLoadError('Мектеп заказын өчүрүү мүмкүн болгон жок.');
+    }
   };
 
-  const handleRestoreOrder = (id: number) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, deletedAt: undefined } : o));
+  const handleRestoreOrder = async (id: number) => {
+    try {
+      const response = await fetch(`/api/orders/${id}/restore`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore order');
+      }
+
+      const updatedOrder = await response.json();
+      setLoadError('');
+      setOrders(prev => prev.map(o => o.id === id ? updatedOrder : o));
+    } catch (error) {
+      console.error('Restore order error:', error);
+      setLoadError('Заказды калыбына келтирүү мүмкүн болгон жок.');
+    }
   };
 
-  const handleRestoreSchoolOrder = (id: number) => {
-    setSchoolOrders(prev => prev.map(o => o.id === id ? { ...o, deletedAt: undefined } : o));
+  const handleRestoreSchoolOrder = async (id: number) => {
+    try {
+      const response = await fetch(`/api/school-orders/${id}/restore`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore school order');
+      }
+
+      const updatedOrder = await response.json();
+      setLoadError('');
+      setSchoolOrders(prev => prev.map(o => o.id === id ? updatedOrder : o));
+    } catch (error) {
+      console.error('Restore school order error:', error);
+      setLoadError('Мектеп заказын калыбына келтирүү мүмкүн болгон жок.');
+    }
   };
 
   const activeOrders = orders.filter(o => !o.deletedAt);
@@ -1470,7 +1584,7 @@ export default function App() {
         {currentPage === 'dashboard' ? (
           <Dashboard key="dashboard" onNavigate={setCurrentPage} orders={activeOrders} />
         ) : currentPage === 'wedding' ? (
-          <WeddingPage key="wedding" onNavigate={setCurrentPage} />
+          <WeddingPage key="wedding" onNavigate={setCurrentPage} orders={activeOrders} />
         ) : currentPage === 'school_list' ? (
           <SchoolListPage key="school_list" onNavigate={setCurrentPage} schoolOrders={activeSchoolOrders} onDeleteOrder={handleDeleteSchoolOrder} />
         ) : currentPage === 'add_school_order' ? (
@@ -1498,6 +1612,14 @@ export default function App() {
           <AIChatModal isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
         )}
       </AnimatePresence>
+
+      {loadError && (
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-medium rounded-xl px-4 py-3">
+            {loadError}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Footer - Shared across pages */}

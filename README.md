@@ -12,17 +12,21 @@
    `npm install`
 2. Create a local env file from `.env.example` and set your key:
    `GEMINI_API_KEY=...`
-3. Start the API server in one terminal:
+3. Optional: set a custom SQLite path:
+   `DB_PATH=./data/app.db`
+4. Start the API server in one terminal:
    `npm run dev:server`
-4. Start the Vite dev server in another terminal:
+5. Start the Vite dev server in another terminal:
    `npm run dev`
 
 The UI runs on Vite, and `/api/*` is proxied to the Express server.
+All order data is stored in SQLite (no demo seed records).
 
 ## Production (Railway)
 
 1. Set the `GEMINI_API_KEY` environment variable in Railway.
-2. Railway will run:
+2. Optionally set `DB_PATH` (default is `./data/app.db`).
+3. Railway will run:
    `npm install`
    `npm run build`
    `npm start`
